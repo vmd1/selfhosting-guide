@@ -1,7 +1,7 @@
 # Self-hosting with docker, a guide to all the services I use
 
 ## Services Run:
-This is a WiP, I'll start by listing out all the services, but not all of them will have guides yet in this repository.
+This is a WiP, I'll start by listing out all the services, but not all of them will have guides yet in this repository. Some of these setups may not be best practise, so please do let me know if you think there are any good changes that could be made, by making an issue.
 
 A brief explanation of my own personal setup, I am running 4 nodes, two of which are free-tier Oracle Cloud VMs with the sole purpose of just running some small backup services, e.g. Nginx Proxy, Uptime-Kuma, and DNS. The other two are a Raspberry Pi 5, and a Raspberry Pi 3. 
 

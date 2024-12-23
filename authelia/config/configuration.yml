@@ -1,0 +1,186 @@
+---
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+server:
+  address: 'tcp://:9091'
+
+log:
+  level: 'debug'
+
+totp:
+  issuer: 'example.com'
+
+identity_validation:
+  reset_password:
+    jwt_secret: ## REDACTED ##
+
+authentication_backend:
+  # Password reset through authelia works normally.
+  password_reset:
+    disable: false
+  # How often authelia should check if there is an user update in LDAP
+  refresh_interval: 1m
+  ldap:
+    implementation: custom
+    # Pattern is ldap://HOSTNAME-OR-IP:PORT
+    # Normal ldap port is 389, standard in LLDAP is 3890
+    address: ldap://lldap:3890
+    # The dial timeout for LDAP.
+    timeout: 5s
+    # Use StartTLS with the LDAP connection, TLS not supported right now
+    start_tls: false
+    #tls:
+    #  skip_verify: false
+    #  minimum_version: TLS1.2
+    # Set base dn, like dc=google,dc.com
+    base_dn: dc=example,dc=com
+    # You need to set this to ou=people, because all users are stored in this ou!
+    additional_users_dn: ou=people
+    # To allow sign in both with username and email, one can use a filter like
+    # (&(|({username_attribute}={input})({mail_attribute}={input}))(objectClass=person))
+    users_filter: "(&({username_attribute}={input})(objectClass=person))"
+    # Set this to ou=groups, because all groups are stored in this ou
+    additional_groups_dn: ou=groups
+    # The groups are not displayed in the UI, but this filter works.
+    groups_filter: "(member={dn})"
+    # The attribute holding the name of the group.
+    attributes:
+      display_name: displayName
+      username: uid
+      group_name: cn
+      mail: mail
+      # distinguished_name: distinguishedName
+      # member_of: memberOf
+
+    # The username and password of the bind user.
+    # "bind_user" should be the username you created for authentication with the "lldap_strict_readonly" permission. It is not recommended to use an actual admin account here.
+    # If you are configuring Authelia to change user passwords, then the account used here needs the "lldap_password_manager" permission instead.
+    user: uid=authelia,ou=people,dc=example,dc=com
+    # Password can also be set using a secret: https://www.authelia.com/docs/configuration/secrets.html
+    password: ## REDACTED ##
+
+access_control:
+  default_policy: 'deny'
+  rules:
+    # Rules applied to everyone
+
+# Examples
+    - domain: 'admin.example.com'
+      policy: 'two_factor'
+      subject: 'group:admin'
+
+    - domain: '2fauth.example.com'
+      policy: 'one_factor'
+      subject: 'group:family'
+
+    - domain: 'vpn.example.com'
+      policy: 'two_factor'
+      subject: 'group:admin'
+
+    - domain: 'manage.example.com'
+      policy: 'two_factor'
+      subject: 'group:admin'
+
+    - domain: 'dashboard.example.com'
+      policy: 'one_factor'
+
+    - domain: 'status.example.com'
+      policy: 'bypass'
+
+      # Wildcard
+    - domain: '*.example.com'
+      policy: 'two_factor'
+      subject: 'group:admin'
+
+session:
+  # This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE
+  secret: ## REDACTED ##
+
+  cookies:
+    - name: 'authelia_session'
+      domain: 'example.com'  # Should match whatever your root protected domain is
+      authelia_url: 'https://auth.example.com'
+      expiration: '1 hour'
+      inactivity: '5 minutes'
+
+  redis:
+    host: 'redis'
+    port: 6379
+
+
+regulation:
+  max_retries: 3
+  find_time: '2 minutes'
+  ban_time: '5 minutes'
+
+storage:
+  encryption_key: ## REDACTED ##
+  local:
+    path: '/config/db.sqlite3'
+
+
+notifier:
+  disable_startup_check: false
+  smtp:
+    username: ## REDACTED ##
+    password: ## REDACTED ##
+    host: ## REDACTED ##
+    port: ## REDACTED ##
+    sender: ## REDACTED ##
+    subject: "[Authelia] {title}"
+    startup_check_address: ## REDACTED ##
+    disable_require_tls: false
+    disable_html_emails: false
+    tls:
+      server_name: ## REDACTED ##
+      skip_verify: false
+      minimum_version: TLS1.2
+
+identity_providers:
+  # If using OIDC:
+  # Otherwise no need for this entire section.
+  oidc:
+    hmac_secret: ## REDACTED ##
+    jwks:
+      - key: |
+          -----BEGIN PRIVATE KEY-----
+          ## REDACTED ##
+          -----END PRIVATE KEY-----
+    authorization_policies:
+      standard:
+        default_policy: 'two_factor'
+        rules:
+          - policy: 'deny'
+            subject: 'group:friends'
+    # Examples of OIDC Clients, Immich and Kasm Workspaces
+    clients:
+      - client_id: 'immich'
+        client_name: 'immich'
+        client_secret: ## REDACTED ##
+        public: false
+        authorization_policy: 'standard'
+        redirect_uris:
+          - 'https://photos.example.com/auth/login'
+          - 'https://photos.example.com/user-settings'
+          - 'app.immich:///oauth-callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'
+        userinfo_signed_response_alg: 'none'
+      - client_id: 'kasm'
+        client_name: 'Kasm Workspaces'
+        client_secret: ## REDACTED ##
+        public: false
+        authorization_policy: 'two_factor'
+        redirect_uris:
+          - 'https://kasm.example.com/api/oidc_callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'groups'
+          - 'email'
+        userinfo_signed_response_alg: 'none'
+...
